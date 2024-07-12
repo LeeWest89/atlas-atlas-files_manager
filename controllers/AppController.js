@@ -7,7 +7,7 @@ const AppController = {
     const dbStatus = dbClient.isAlive();
 
     if (redisStatus && dbStatus) {
-      response.status(200).json({ redis: true, db: true});
+      response.status(200).json({ redis: true, db: true });
     } else {
       response.status(500).json({ redis: redisStatus, db: dbStatus });
     }
@@ -21,7 +21,7 @@ const AppController = {
     } catch (err) {
       response.status(500).json({ error: err.message });
     }
-  }
+  },
 };
 
 module.exports = AppController;

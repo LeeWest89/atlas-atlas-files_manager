@@ -1,15 +1,18 @@
-import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
-import path from 'path';
+import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
+
 const { ObjectId } = require('mongodb');
 
 const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
 
 const FilesController = {
   async postUpload(request, response) {
-    const { name, type, parentId, isPublic, data } = request.body;
+    const {
+      name, type, parentId, isPublic, data,
+    } = request.body;
     const token = request.headers['x-token'];
 
     if (!token) {
@@ -23,15 +26,15 @@ const FilesController = {
     }
 
     if (!name) {
-      return (response.status(400).json({ error: 'Missing name'}));
+      return (response.status(400).json({ error: 'Missing name' }));
     }
 
     if (!data && type !== 'folder') {
-      return (response.status(400).json({ error: 'Missing data'}));
+      return (response.status(400).json({ error: 'Missing data' }));
     }
 
     if (!type || !['folder', 'file', 'image'].includes(type)) {
-      return (response.status(400).json({ error: 'Missing type'}));
+      return (response.status(400).json({ error: 'Missing type' }));
     }
 
     try {
@@ -57,32 +60,33 @@ const FilesController = {
         const fileId = uuidv4();
         localPath = path.join(FOLDER_PATH, fileId);
         const fileData = Buffer.from(data, 'base64');
-  
+
         fs.writeFileSync(localPath, fileData);
       }
 
       const newFile = {
-        userId: userId,
-        name: name,
-        type: type,
+        userId,
+        name,
+        type,
         isPublic: isPublic || false,
         parentId: parentId || 0,
-        localPath: localPath,
+        localPath,
       };
 
       const insertedFile = await dbClient.files.insertOne(newFile);
       return (response.status(201).send({
         id: insertedFile.insertedId,
-        userId: userId,
+        userId,
         name,
         type,
         isPublic: isPublic || false,
-        parentId: parentId || 0
+        parentId: parentId || 0,
       }));
     } catch (error) {
       console.error(error);
+      return (error);
     }
-  }
-}
+  },
+};
 
 module.exports = FilesController;

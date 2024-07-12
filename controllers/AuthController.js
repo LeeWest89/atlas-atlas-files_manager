@@ -5,14 +5,14 @@ import redisClient from '../utils/redis';
 
 const AuthController = {
   async getConnect(request, response) {
-    //sign-in the user by generating a new authentication token
+    // sign-in the user by generating a new authentication token
     const baseCred = request.headers.authorization.split(' ')[1];
     const cred = Buffer.from(baseCred, 'base64').toString('ascii');
     const [email, password] = cred.split(':');
     const user = await dbClient.users.findOne({ email, password: sha1(password) });
 
     if (!user) {
-      return (response.status(401).json({error: 'Unauthorized'}));
+      return (response.status(401).json({ error: 'Unauthorized' }));
     }
 
     const token = uuidv4();
@@ -38,7 +38,7 @@ const AuthController = {
 
     await redisClient.del(`auth_${token}`);
     return (response.status(204).send());
-  }
+  },
 };
 
 module.exports = AuthController;
