@@ -133,13 +133,16 @@ const FilesController = {
     // pagination limit
     const limit = 20;
     const skip = parseInt(page, 10) * limit;
+    const parentIdInt = parseInt(parentId, 10);
 
     try {
       const files = await dbClient.files.aggregate([
-        { $match: { parentId, userId }},
+        { $match: { parentId: parentIdInt, userId }},
         { $skip: skip },
         { $limit: limit }
       ]).toArray();
+
+      console.log(`Files retrieved for user ${userId} with parentId ${parentId}:`, files);
 
       return response.status(200).json(files);
     } catch (error) {
