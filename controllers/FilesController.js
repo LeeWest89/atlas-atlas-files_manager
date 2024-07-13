@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+import { error } from 'console';
 
 const { ObjectId } = require('mongodb');
 
@@ -85,6 +86,65 @@ const FilesController = {
     } catch (error) {
       console.error(error);
       return (error);
+    }
+  },
+
+  async getShow(request, response) {
+    const { id } = request.params;
+    const token = request.headers['x-token'];
+
+    if (!token) {
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = await redisClient.get(`auth_${token}`);
+
+    if (!userId) {
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const file = await dbClient.files.findOne({ _id: ObjectId(id), userId });
+
+      if (!file) {
+        return response.status(404).json({ error: 'Not found' });
+      }
+
+      return response.status(200).json(file);
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
+
+  async getIndex(request, response) {
+    const { parentId = '0', page = 0 } = request.query;
+    const token = request.headers['x-token'];
+
+    if (!token) {
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = await redisClient.get(`auth_${token}`);
+
+    if (!userId) {
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+    // pagination limit
+    const limit = 20;
+    const skip = parseInt(page, 10) * limit;
+
+    try {
+      const files = await dbClient.files.aggregate([
+        { $match: { parentId, userId }},
+        { $skip: skip },
+        { $limit: limit }
+      ]).toArray();
+
+      return response.status(200).json(files);
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ error: 'Internal Server Error' });
     }
   },
 };
