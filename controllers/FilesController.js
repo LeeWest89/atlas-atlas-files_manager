@@ -161,6 +161,56 @@ const FilesController = {
       return response.status(500).json({ error: 'Internal Server Error' });
     }
   },
+
+  async putPublish(request, response) {
+    const token = request.headers['x-token'];
+
+    if (!token) {
+      console.log('No token provided')
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = await redisClient.get(`auth_${token}`);
+
+    if (!userId) {
+      console.log('User not found for provided token')
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const file = await dbClient.files.findOne({ _id: ObjectId(id), userId});
+
+      if (!file) {
+        return response.status(404).json({ error: 'Not found' });
+      }
+
+      await dbClient.files.updateOne(
+        { _id: ObjectId(id) }, { $set: { isPublic: true }}
+      );
+      const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id) });
+      return response.status(200).json(updatedFile);
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
+
+  async putUnpublish(request, response) {
+    const token = request.headers['x-token'];
+
+    if (!token) {
+      console.log('No token provided')
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userId = await redisClient.get(`auth_${token}`);
+
+    if (!userId) {
+      console.log('User not found for provided token')
+      return response.status(401).json({ error: 'Unauthorized' });
+    }
+  },
+
 };
 
 module.exports = FilesController;
