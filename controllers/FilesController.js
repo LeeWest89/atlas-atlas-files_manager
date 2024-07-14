@@ -170,6 +170,7 @@ const FilesController = {
   },
 
   async putPublish(request, response) {
+    const { id } = request.params;
     const token = request.headers['x-token'];
 
     if (!token) {
