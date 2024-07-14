@@ -109,8 +109,15 @@ const FilesController = {
       if (!file) {
         return response.status(404).json({ error: 'Not found' });
       }
-
-      return response.status(200).json(file);
+      const transformedFile = {
+        id: file._id,
+        userId: file.userId,
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: file.parentId,
+      };
+      return response.status(200).json(transformedFile);
     } catch (error) {
       console.error(error);
       return response.status(500).json({ error: 'Internal Server Error' });
