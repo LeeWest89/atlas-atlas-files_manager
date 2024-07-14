@@ -196,6 +196,7 @@ const FilesController = {
   },
 
   async putUnpublish(request, response) {
+    const { id } = request.params;
     const token = request.headers['x-token'];
 
     if (!token) {
@@ -208,6 +209,24 @@ const FilesController = {
     if (!userId) {
       console.log('User not found for provided token')
       return response.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const file = await dbClient.files.findOne({ _id: ObjectId(id), userId });
+
+      if (!file) {
+        return response.status(404).json({ error: 'Not found' });
+      }
+
+      await dbClient.files.updateOne(
+        { _id: ObjectId(id) }, { $set: { isPublic: false }}
+      );
+
+      const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id)});
+      return response.status(200).json(updatedFile);
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ error: 'Internal Server Error' });
     }
   },
 
