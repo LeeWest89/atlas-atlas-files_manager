@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+import transformFile from '../utils/transform';
 import { error } from 'console';
 
 const { ObjectId } = require('mongodb');
@@ -109,15 +110,8 @@ const FilesController = {
       if (!file) {
         return response.status(404).json({ error: 'Not found' });
       }
-      const transformedFile = {
-        id: file._id,
-        userId: file.userId,
-        name: file.name,
-        type: file.type,
-        isPublic: file.isPublic,
-        parentId: file.parentId,
-      };
-      return response.status(200).json(transformedFile);
+      // return correctly formatted file
+      return response.status(200).json(transformFile(file));
     } catch (error) {
       console.error(error);
       return response.status(500).json({ error: 'Internal Server Error' });
@@ -152,15 +146,8 @@ const FilesController = {
       ]).toArray();
 
       console.log(`Files retrieved for user ${userId} with parentId ${parentId}:`, files);
-
-      const transformedFiles = files.map(file => ({
-        id: file._id,
-        userId: file.userId,
-        name: file.name,
-        type: file.type,
-        isPublic: file.isPublic,
-        parentId: file.parentId,
-      }));
+      // format files
+      const transformedFiles = files.map(transformFile);
 
       return response.status(200).json(transformedFiles);
     } catch (error) {
@@ -196,7 +183,7 @@ const FilesController = {
         { _id: ObjectId(id) }, { $set: { isPublic: true }}
       );
       const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id) });
-      return response.status(200).json(updatedFile);
+      return response.status(200).json(transformFile(updatedFile));
     } catch (error) {
       console.error(error);
       return response.status(500).json({ error: 'Internal Server Error' });
@@ -231,7 +218,7 @@ const FilesController = {
       );
 
       const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id)});
-      return response.status(200).json(updatedFile);
+      return response.status(200).json(transformFile(updatedFile));
     } catch (error) {
       console.error(error);
       return response.status(500).json({ error: 'Internal Server Error' });
