@@ -122,12 +122,14 @@ const FilesController = {
     const token = request.headers['x-token'];
 
     if (!token) {
+      console.log('No token provided')
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
     const userId = await redisClient.get(`auth_${token}`);
 
     if (!userId) {
+      console.log('User not found for provided token')
       return response.status(401).json({ error: 'Unauthorized' });
     }
     // pagination limit
