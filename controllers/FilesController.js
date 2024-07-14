@@ -144,7 +144,16 @@ const FilesController = {
 
       console.log(`Files retrieved for user ${userId} with parentId ${parentId}:`, files);
 
-      return response.status(200).json(files);
+      const transformedFiles = files.map(file => ({
+        id: file._id,
+        userId: file.userId,
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: file.parentId,
+      }));
+
+      return response.status(200).json(transformedFiles);
     } catch (error) {
       console.error(error);
       return response.status(500).json({ error: 'Internal Server Error' });
