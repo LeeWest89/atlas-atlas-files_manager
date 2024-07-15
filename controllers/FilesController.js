@@ -4,7 +4,6 @@ import fs from 'fs';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 import transformFile from '../utils/transform';
-import { error } from 'console';
 
 const { ObjectId } = require('mongodb');
 
@@ -123,30 +122,42 @@ const FilesController = {
     const token = request.headers['x-token'];
 
     if (!token) {
-      console.log('No token provided')
+      console.log('No token provided');
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
     const userId = await redisClient.get(`auth_${token}`);
 
     if (!userId) {
-      console.log('User not found for provided token')
+      console.log('User not found for provided token');
       return response.status(401).json({ error: 'Unauthorized' });
     }
-    // pagination limit
+
+    // Pagination limit
     const limit = 20;
     const skip = parseInt(page, 10) * limit;
-    const parentIdInt = parseInt(parentId, 10);
 
     try {
-      const files = await dbClient.files.aggregate([
-        { $match: { parentId: parentIdInt, userId }},
-        { $skip: skip },
-        { $limit: limit }
-      ]).toArray();
+      let files;
+
+      if (parentId === '0') {
+        // all files for user
+        files = await dbClient.files.aggregate([
+          { $match: { userId } },
+          { $skip: skip },
+          { $limit: limit },
+        ]).toArray();
+      } else {
+        // specific parentId
+        files = await dbClient.files.aggregate([
+          { $match: { parentId, userId } },
+          { $skip: skip },
+          { $limit: limit },
+        ]).toArray();
+      }
 
       console.log(`Files retrieved for user ${userId} with parentId ${parentId}:`, files);
-      // format files
+      // Format files
       const transformedFiles = files.map(transformFile);
 
       return response.status(200).json(transformedFiles);
@@ -161,26 +172,26 @@ const FilesController = {
     const token = request.headers['x-token'];
 
     if (!token) {
-      console.log('No token provided')
+      console.log('No token provided');
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
     const userId = await redisClient.get(`auth_${token}`);
 
     if (!userId) {
-      console.log('User not found for provided token')
+      console.log('User not found for provided token');
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
     try {
-      const file = await dbClient.files.findOne({ _id: ObjectId(id), userId});
+      const file = await dbClient.files.findOne({ _id: ObjectId(id), userId });
 
       if (!file) {
         return response.status(404).json({ error: 'Not found' });
       }
 
       await dbClient.files.updateOne(
-        { _id: ObjectId(id) }, { $set: { isPublic: true }}
+        { _id: ObjectId(id) }, { $set: { isPublic: true } },
       );
       const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id) });
       return response.status(200).json(transformFile(updatedFile));
@@ -195,14 +206,14 @@ const FilesController = {
     const token = request.headers['x-token'];
 
     if (!token) {
-      console.log('No token provided')
+      console.log('No token provided');
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
     const userId = await redisClient.get(`auth_${token}`);
 
     if (!userId) {
-      console.log('User not found for provided token')
+      console.log('User not found for provided token');
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -214,10 +225,10 @@ const FilesController = {
       }
 
       await dbClient.files.updateOne(
-        { _id: ObjectId(id) }, { $set: { isPublic: false }}
+        { _id: ObjectId(id) }, { $set: { isPublic: false } },
       );
 
-      const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id)});
+      const updatedFile = await dbClient.files.findOne({ _id: ObjectId(id) });
       return response.status(200).json(transformFile(updatedFile));
     } catch (error) {
       console.error(error);
