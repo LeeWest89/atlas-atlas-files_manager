@@ -1,5 +1,6 @@
 /* Setup class DBClient */
-import { MongoClient } from 'mongodb';
+// import { MongoClient } from 'mongodb';
+const { MongoClient } = require('mongodb');
 
 const host = process.env.DB_HOST || 'localhost';
 const port = process.env.DB_PORT || 27017;
@@ -35,4 +36,4 @@ class DBClient {
 }
 
 const dbClient = new DBClient();
-export default dbClient;
+module.exports = dbClient;

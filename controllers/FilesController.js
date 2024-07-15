@@ -1,9 +1,17 @@
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
-import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
-import transformFile from '../utils/transform';
+// import path from 'path';
+// import { v4 as uuidv4 } from 'uuid';
+// import fs from 'fs';
+// import mime from 'mime-types';
+// import dbClient from '../utils/db';
+// import redisClient from '../utils/redis';
+// import transformFile from '../utils/transform';
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const mime = require('mime-types');
+const dbClient = require('../utils/db');
+const redisClient = require('../utils/redis');
+const transformFile = require('../utils/transform');
 
 const { ObjectId } = require('mongodb');
 
@@ -236,6 +244,50 @@ const FilesController = {
     }
   },
 
+  async getFile(request, response) {
+    const { id } = request.params;
+    const token = request.headers['x-token'];
+
+    try {
+      if (!ObjectId.isValid(id)) {
+        return (response.status(404).json({ error: 'Not found' }));
+      }
+
+      const file = await dbClient.files.findOne({ _id: ObjectId(id) });
+
+      if (!file) {
+        return (response.status(404).json({ error: 'Not found' }));
+      }
+
+      if (file.type === 'folder') {
+        return (response.status(400).json({ error: "A folder doesn't have content" }));
+      }
+
+      if (!file.isPublic && !token) {
+        return response.status(404).json({ error: 'Not found' });
+      }
+
+      if (token) {
+        const userId = await redisClient.get(`auth_${token}`);
+        if (!userId || (!file.isPublic && userId !== file.userId.toString())) {
+          return response.status(404).json({ error: 'Not found' });
+        }
+      }
+
+      if (!fs.existsSync(file.localPath)) {
+        return (response.status(404).json({ error: 'Not found' }));
+      }
+
+      const mimeType = mime.lookup(file.name) || 'application/octet-stream';
+
+      response.setHeader('Content-Type', mimeType);
+
+      fs.createReadStream(file.localPath).pipe(response);
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
 };
 
 module.exports = FilesController;

@@ -17,5 +17,6 @@ router.get('/files/:id', FilesController.getShow); // 6
 router.get('/files', FilesController.getIndex); // 6
 router.put('/files/:id/publish', FilesController.putPublish); // 7
 router.put('/files/:id/unpublish', FilesController.putUnpublish); // 7
+router.get('/files/:id/data', FilesController.getFile); // 8
 
 module.exports = router;
