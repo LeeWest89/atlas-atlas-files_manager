@@ -9,11 +9,10 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const mime = require('mime-types');
+const { ObjectId } = require('mongodb');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 const transformFile = require('../utils/transform');
-
-const { ObjectId } = require('mongodb');
 
 const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
 
@@ -282,12 +281,16 @@ const FilesController = {
 
       response.setHeader('Content-Type', mimeType);
 
-      fs.createReadStream(file.localPath).pipe(response);
+      return new Promise((resolve, reject) => {
+        fs.createReadStream(file.localPath).pipe(response);
+        fs.createReadStream(file.localPath).on('end', () => resolve());
+        fs.createReadStream(file.localPath).on('error', (error) => reject(error));
+      });
     } catch (error) {
       console.error(error);
       return response.status(500).json({ error: 'Internal Server Error' });
     }
-  }
+  },
 };
 
 module.exports = FilesController;
