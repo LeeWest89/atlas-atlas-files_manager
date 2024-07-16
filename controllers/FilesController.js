@@ -13,6 +13,7 @@ const { ObjectId } = require('mongodb');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 const transformFile = require('../utils/transform');
+const { fileQueue } = require('../worker');
 
 const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
 
@@ -82,6 +83,14 @@ const FilesController = {
       };
 
       const insertedFile = await dbClient.files.insertOne(newFile);
+
+      if (type === 'image') {
+        await fileQueue.add({
+          userId,
+          fileId: insertedFile.insertedId,
+        });
+      }
+
       return (response.status(201).send({
         id: insertedFile.insertedId,
         userId,
@@ -245,6 +254,7 @@ const FilesController = {
 
   async getFile(request, response) {
     const { id } = request.params;
+    const { size } = request.query;
     const token = request.headers['x-token'];
 
     try {
@@ -273,7 +283,13 @@ const FilesController = {
         }
       }
 
-      if (!fs.existsSync(file.localPath)) {
+      let filePath = file.localPath;
+
+      if (size) {
+        filePath = `${file.localPath}_${size}`;
+      }
+
+      if (!fs.existsSync(filePath)) {
         return (response.status(404).json({ error: 'Not found' }));
       }
 
@@ -282,9 +298,9 @@ const FilesController = {
       response.setHeader('Content-Type', mimeType);
 
       return new Promise((resolve, reject) => {
-        fs.createReadStream(file.localPath).pipe(response);
-        fs.createReadStream(file.localPath).on('end', () => resolve());
-        fs.createReadStream(file.localPath).on('error', (error) => reject(error));
+        fs.createReadStream(filePath).pipe(response);
+        fs.createReadStream(filePath).on('end', () => resolve());
+        fs.createReadStream(filePath).on('error', (error) => reject(error));
       });
     } catch (error) {
       console.error(error);
